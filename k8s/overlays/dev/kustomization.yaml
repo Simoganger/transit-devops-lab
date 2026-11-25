@@ -8,5 +8,5 @@ resources:
 # This is the GitOps "promotion commit": ArgoCD detects the change and deploys.
 images:
   - name: vehicle-api
-    newName: northamerica-northeast1-docker.pkg.dev/REPLACE_PROJECT_ID/transit/vehicle-api
+    newName: northamerica-northeast1-docker.pkg.dev/transit-devops-lab-515802/transit/vehicle-api
     newTag: initial

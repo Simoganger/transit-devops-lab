@@ -3,7 +3,7 @@
 #  1. Project APIs
 #  2. GCS bucket for the Terraform state files (versioned, private)
 #  3. Workload Identity Federation GitHub -> GCP (no JSON key)
-#  4. Service accounts: gh-terraform (IaC) and gh-ci (image push)
+#  4. Service accounts: gh-terraform-sa (IaC) and gh-ci-sa (image push)
 ###############################################################################
 
 locals {
@@ -134,13 +134,13 @@ resource "google_iam_workload_identity_pool_provider" "github" {
 # --- 4. Service accounts -----------------------------------------------------
 resource "google_service_account" "terraform" {
   project      = var.project_id
-  account_id   = "gh-terraform"
+  account_id   = "gh-terraform-sa"
   display_name = "GitHub Actions - Terraform"
 }
 
 resource "google_service_account" "ci" {
   project      = var.project_id
-  account_id   = "gh-ci"
+  account_id   = "gh-ci-sa"
   display_name = "GitHub Actions - image build and push"
 }
 
