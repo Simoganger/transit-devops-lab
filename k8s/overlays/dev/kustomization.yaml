@@ -2,11 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: transit
 resources:
-  - ../../base
+- ../../base
 
 # Updated automatically by .github/workflows/app.yml (kustomize edit set image).
 # This is the GitOps "promotion commit": ArgoCD detects the change and deploys.
 images:
-  - name: vehicle-api
-    newName: northamerica-northeast1-docker.pkg.dev/transit-devops-lab-515802/transit/vehicle-api
-    newTag: initial
+- name: vehicle-api
+  newName: northamerica-northeast1-docker.pkg.dev/transit-devops-lab-515802/transit/vehicle-api
+  newTag: 6e72038dbb4e19fd6a81315210f291304ae2e20a
