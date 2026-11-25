@@ -1,0 +1,85 @@
+# Application CI -> image tagged with its SHA -> GitOps commit -> ArgoCD deploys.
+name: app
+
+on:
+  pull_request:
+    paths: ["app/**"]
+  push:
+    branches: [main]
+    paths: ["app/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write # for the promotion commit in k8s/overlays/dev
+  id-token: write
+
+env:
+  IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/transit/vehicle-api
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # empty if the secret does not exist
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # required by the SonarQube analysis
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build (.NET)
+        working-directory: app
+        run: |
+          dotnet restore
+          dotnet build -c Release --no-restore
+          dotnet format --verify-no-changes --no-restore
+
+      - name: SonarQube / SonarCloud (if SONAR_TOKEN is set)
+        if: ${{ env.SONAR_TOKEN != '' }}
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+        working-directory: app
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+          dotnet sonarscanner begin /k:"${{ vars.SONAR_PROJECT_KEY }}" /o:"${{ vars.SONAR_ORG }}" \
+            /d:sonar.host.url="$SONAR_HOST_URL" /d:sonar.token="$SONAR_TOKEN" /d:sonar.qualitygate.wait=true
+          dotnet build -c Release
+          dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+      - name: Build the image
+        run: docker build -t "$IMAGE:${{ github.sha }}" app
+
+      - name: Vulnerability scan (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1" # blocks the pipeline
+
+      - name: GCP authentication
+        if: github.ref == 'refs/heads/main'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_CI_SA }}
+
+      - name: Push to Artifact Registry
+        if: github.ref == 'refs/heads/main'
+        run: |
+          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+          docker push "$IMAGE:${{ github.sha }}"
+
+      - name: GitOps promotion (update the tag in k8s/overlays/dev)
+        if: github.ref == 'refs/heads/main'
+        working-directory: k8s/overlays/dev
+        run: |
+          kustomize edit set image "vehicle-api=$IMAGE:${{ github.sha }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kustomization.yaml
+          git commit -m "deploy(dev): vehicle-api ${GITHUB_SHA::7}"
+          git push

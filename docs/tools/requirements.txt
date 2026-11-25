@@ -1,0 +1,4 @@
+markdown>=3.5
+pypdf>=4.0
+# reportlab 4.3+ requires Python 3.10; this pin keeps Python 3.9 working.
+reportlab>=4.0,<4.3

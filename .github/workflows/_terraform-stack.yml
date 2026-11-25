@@ -1,0 +1,124 @@
+# Reusable workflow: fmt -> validate -> plan (PR comment) -> apply (main + approval)
+name: _terraform-stack
+
+on:
+  workflow_call:
+    inputs:
+      stack:
+        required: true
+        type: string
+      apply:
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write # obtain the GitHub OIDC token for Workload Identity Federation
+  pull-requests: write
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+  TF_VAR_region: ${{ vars.GCP_REGION }}
+  TF_VAR_state_bucket: ${{ vars.TF_STATE_BUCKET }}
+  TF_VAR_gitops_repo_url: ${{ github.server_url }}/${{ github.repository }}.git
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.stack }}
+    outputs:
+      has_changes: ${{ steps.plan.outputs.exitcode == '2' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: GCP authentication (OIDC, keyless)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_TF_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: terraform init
+        run: terraform init -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+
+      - name: terraform validate
+        run: terraform validate
+
+      - name: Static analysis (Checkov)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: ${{ inputs.stack }}
+          framework: terraform
+          soft_fail: true # switch to false once exceptions are documented
+
+      - name: terraform plan
+        id: plan
+        run: |
+          set +e
+          terraform plan -var-file=env/dev.tfvars -out=tfplan -detailed-exitcode -no-color > plan.txt
+          code=$?
+          echo "exitcode=$code" >> "$GITHUB_OUTPUT"
+          cat plan.txt
+          [ "$code" -eq 1 ] && exit 1 || exit 0
+
+      - name: Comment the plan on the PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          STACK: ${{ inputs.stack }}
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync(`${process.env.STACK}/plan.txt`, 'utf8');
+            const body = `### Terraform plan: \`${process.env.STACK}\`\n<details><summary>Show plan</summary>\n\n\`\`\`\n${plan.slice(-60000)}\n\`\`\`\n</details>`;
+            await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+
+      - name: Keep the plan
+        if: inputs.apply
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ inputs.stack }}
+          path: ${{ inputs.stack }}/tfplan
+          retention-days: 1
+
+  apply:
+    needs: plan
+    if: inputs.apply && needs.plan.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    environment: dev # GitHub protection rule = manual approval
+    defaults:
+      run:
+        working-directory: ${{ inputs.stack }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_TF_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ inputs.stack }}
+          path: ${{ inputs.stack }}
+
+      - run: terraform init -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+
+      # Apply EXACTLY the approved plan (no re-plan).
+      - run: terraform apply -auto-approve tfplan

@@ -1,0 +1,33 @@
+name: terraform
+
+on:
+  pull_request:
+    paths: ["infra/**", "platform/**", ".github/workflows/*terraform*"]
+  push:
+    branches: [main]
+    paths: ["infra/**", "platform/**", ".github/workflows/*terraform*"]
+  workflow_dispatch:
+
+# One run at a time: two concurrent applies would fight over the state lock.
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  infra:
+    uses: ./.github/workflows/_terraform-stack.yml
+    with:
+      stack: infra
+      apply: ${{ github.event_name != 'pull_request' }}
+
+  platform:
+    needs: infra # the platform depends on the cluster
+    uses: ./.github/workflows/_terraform-stack.yml
+    with:
+      stack: platform
+      apply: ${{ github.event_name != 'pull_request' }}
