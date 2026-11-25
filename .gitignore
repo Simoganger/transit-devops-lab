@@ -9,3 +9,4 @@ app/bin/
 app/obj/
 deploy_key*
 docs/tools/.venv/
+logs/

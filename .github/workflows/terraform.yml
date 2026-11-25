@@ -7,6 +7,17 @@ on:
     branches: [main]
     paths: ["infra/**", "platform/**", ".github/workflows/*terraform*"]
   workflow_dispatch:
+    inputs:
+      action:
+        description: "apply = create/update (infra then platform). destroy = tear down (platform then infra)."
+        type: choice
+        options: [apply, destroy]
+        default: apply
+      confirm:
+        description: 'For destroy only: type "destroy" to confirm'
+        type: string
+        required: false
+        default: ""
 
 # One run at a time: two concurrent applies would fight over the state lock.
 concurrency:
@@ -19,7 +30,9 @@ permissions:
   pull-requests: write
 
 jobs:
+  # --- Create / update: infra -> platform ---------------------------------------
   infra:
+    if: inputs.action != 'destroy' # empty on push and pull_request
     uses: ./.github/workflows/_terraform-stack.yml
     with:
       stack: infra
@@ -31,3 +44,35 @@ jobs:
     with:
       stack: platform
       apply: ${{ github.event_name != 'pull_request' }}
+
+  # --- Destroy: platform -> infra (manual run only) -------------------------
+  # Each stack produces a destroy plan, then waits for the "dev" environment
+  # approval before applying it, like a normal apply.
+  confirm-destroy:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "destroy" ]; then
+            echo "::error::Type \"destroy\" in the confirm input to tear down the environment."
+            exit 1
+          fi
+
+  destroy-platform:
+    needs: confirm-destroy
+    uses: ./.github/workflows/_terraform-stack.yml
+    with:
+      stack: platform
+      apply: true
+      destroy: true
+
+  destroy-infra:
+    needs: destroy-platform # the cluster, VPC and static IP must outlive the platform
+    uses: ./.github/workflows/_terraform-stack.yml
+    with:
+      stack: infra
+      apply: true
+      destroy: true

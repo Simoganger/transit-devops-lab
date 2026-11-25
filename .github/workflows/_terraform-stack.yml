@@ -1,4 +1,5 @@
 # Reusable workflow: fmt -> validate -> plan (PR comment) -> apply (main + approval)
+# With destroy: true, the plan is a destroy plan (same review + approval gate).
 name: _terraform-stack
 
 on:
@@ -10,6 +11,10 @@ on:
       apply:
         required: true
         type: boolean
+      destroy:
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -64,9 +69,11 @@ jobs:
 
       - name: terraform plan
         id: plan
+        env:
+          DESTROY_FLAG: ${{ inputs.destroy && '-destroy' || '' }}
         run: |
           set +e
-          terraform plan -var-file=env/dev.tfvars -out=tfplan -detailed-exitcode -no-color > plan.txt
+          terraform plan ${DESTROY_FLAG} -var-file=env/dev.tfvars -out=tfplan -detailed-exitcode -no-color > plan.txt
           code=$?
           echo "exitcode=$code" >> "$GITHUB_OUTPUT"
           cat plan.txt
@@ -120,5 +127,78 @@ jobs:
 
       - run: terraform init -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
 
+      # --- Destroy of the platform stack only --------------------------------------
+      # The Gateway (and its load balancer, NEGs and use of the static IP) is
+      # created by ArgoCD, not Terraform. It must be gone before the infra stack
+      # can delete the static IP, the subnet and the VPC.
+      - name: "Pre-destroy: read cluster details from the infra state"
+        id: cluster
+        if: inputs.destroy && inputs.stack == 'platform'
+        working-directory: infra
+        run: |
+          terraform init -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" > /dev/null
+          echo "name=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
+          echo "location=$(terraform output -raw cluster_location)" >> "$GITHUB_OUTPUT"
+          echo "gateway_ip=$(terraform output -raw gateway_ip)" >> "$GITHUB_OUTPUT"
+
+      - name: "Pre-destroy: cluster credentials (DNS endpoint)"
+        if: inputs.destroy && inputs.stack == 'platform'
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ steps.cluster.outputs.name }}
+          location: ${{ steps.cluster.outputs.location }}
+          use_dns_based_endpoint: true
+
+      - name: "Pre-destroy: setup gcloud"
+        if: inputs.destroy && inputs.stack == 'platform'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: "Pre-destroy: stop ArgoCD and release the Gateway load balancer"
+        if: inputs.destroy && inputs.stack == 'platform'
+        env:
+          CLUSTER: ${{ steps.cluster.outputs.name }}
+          LOCATION: ${{ steps.cluster.outputs.location }}
+          GATEWAY_IP: ${{ steps.cluster.outputs.gateway_ip }}
+        run: |
+          set -euo pipefail
+
+          # 1. Stop ArgoCD reconciliation, otherwise selfHeal recreates the Gateway.
+          kubectl -n argocd scale statefulset argocd-application-controller --replicas=0 || true
+
+          # 2. Delete the Gateway. The GKE controller removes the load balancer
+          #    (forwarding rule, proxy, URL map, backend service) before it
+          #    releases the Gateway finalizer, so --wait covers that work.
+          kubectl -n transit delete gateway transit-gateway --ignore-not-found --wait=true --timeout=15m
+
+          # 3. Wait until no forwarding rule uses the static IP any more.
+          for i in $(seq 1 45); do
+            fr=$(gcloud compute forwarding-rules list --global --filter="IPAddress=$GATEWAY_IP" --format='value(name)' | wc -l)
+            echo "attempt $i: forwarding rules on $GATEWAY_IP: $fr"
+            if [ "$fr" -eq 0 ]; then exit 0; fi
+            sleep 20
+          done
+          echo "::error::Forwarding rule still uses $GATEWAY_IP after 15 minutes"
+          exit 1
+
       # Apply EXACTLY the approved plan (no re-plan).
       - run: terraform apply -auto-approve tfplan
+
+      # The NEGs of the vehicle-api Service are deleted by the GKE NEG
+      # controller once the namespace is gone. They live in the GKE subnet,
+      # so the infra destroy would fail while they still exist.
+      - name: "Post-destroy: wait for the NEGs to be deleted"
+        if: inputs.destroy && inputs.stack == 'platform'
+        env:
+          CLUSTER: ${{ steps.cluster.outputs.name }}
+          LOCATION: ${{ steps.cluster.outputs.location }}
+        run: |
+          set -euo pipefail
+          VPC=$(gcloud container clusters describe "$CLUSTER" --location "$LOCATION" --format='value(network)')
+          for i in $(seq 1 45); do
+            neg=$(gcloud compute network-endpoint-groups list --filter="network~/${VPC}\$" --format='value(name)' | wc -l)
+            echo "attempt $i: NEGs in $VPC: $neg"
+            if [ "$neg" -eq 0 ]; then exit 0; fi
+            sleep 20
+          done
+          echo "::error::NEGs still present in $VPC after 15 minutes"
+          exit 1

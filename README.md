@@ -49,6 +49,183 @@ flowchart TB
     argocd -- "watches Git / sync" --> repo
 ```
 
+> Note: Pub/Sub is a Google API, not a Private Service Access service. Pods reach it through **Private Google Access** on the GKE subnet. PSA only carries Redis and Cloud SQL.
+
+## Interaction flows
+
+Each diagram follows one type of user through the platform and names the component that handles each step.
+
+### Flow 1: A rider or third-party app reads vehicle positions
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor C as Rider / third-party app
+    participant LB as Global L7 LB<br/>(GKE Gateway, static IP)
+    participant CA as Cloud Armor<br/>(transit-lab-edge-policy)
+    participant NP as NetworkPolicy<br/>(Dataplane V2)
+    participant API as vehicle-api pod<br/>(Autopilot, private node)
+    participant R as Memorystore Redis<br/>(private IP via PSA)
+
+    C->>LB: GET /api/v1/vehicles
+    LB->>CA: Evaluate security policy
+    alt OWASP WAF match (SQLi, XSS, LFI, RCE, scanner)
+        CA-->>C: 403 Forbidden
+    else Over rate limit per IP per minute
+        CA-->>C: 429 Too Many Requests
+    else Allowed (geo rule is preview only, logged)
+        CA->>LB: allow
+    end
+    Note over LB: HTTPRoute matches the /api/ prefix<br/>NEG sends traffic straight to healthy pod IPs
+    LB->>NP: TCP 8080 from 35.191.0.0/16 or 130.211.0.0/22
+    NP->>API: allowed (everything else denied by default)
+    API->>R: GET vehicles:snapshot
+    alt Cache hit
+        R-->>API: cached JSON
+    else Cache miss
+        R-->>API: nil
+        API->>API: Build snapshot (simulated data)
+        API->>R: SET vehicles:snapshot (TTL 10 s)
+    end
+    API-->>C: 200 application/json
+```
+
+Components: [network.tf](infra/network.tf) (static IP, VPC-native ranges), [gateway.yaml](k8s/base/gateway.yaml) (Gateway, HTTPRoute, GCPBackendPolicy, HealthCheckPolicy), [armor.tf](infra/armor.tf), [networkpolicy.yaml](k8s/base/networkpolicy.yaml), [deployment.yaml](k8s/base/deployment.yaml) (HPA 2-10, PDB), [data.tf](infra/data.tf) (Redis). The pod reads `REDIS_HOST` from the `transit-config` ConfigMap, which Terraform fills from the `infra` outputs ([platform/main.tf](platform/main.tf)).
+
+### Flow 2: A vehicle or AVL feed publishes a position
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor V as Vehicle / AVL feed
+    participant EDGE as LB + Cloud Armor<br/>+ NetworkPolicy
+    participant API as vehicle-api pod<br/>(KSA transit/vehicle-api)
+    participant IAM as Workload Identity<br/>(IAM)
+    participant T as Pub/Sub topic<br/>vehicle-positions
+    participant S as Subscription<br/>vehicle-positions-processor
+    participant W as Consumer<br/>(not implemented yet)
+    participant DLQ as vehicle-positions-dlq<br/>+ dlq-inspect subscription
+    participant M as Cloud Monitoring
+
+    V->>EDGE: POST /api/v1/vehicles/positions (JSON)
+    EDGE->>API: Same edge checks as flow 1 (JSON body parsed by WAF)
+    API->>IAM: KSA token exchange (no JSON key)
+    IAM-->>API: Federated token with roles/pubsub.publisher
+    API->>T: Publish (orderingKey = vehicleId, schema = vehicle-position.v1)
+    T-->>API: messageId
+    API-->>V: 202 Accepted {messageId}
+    T->>S: Fan out (24 h topic retention)
+    S->>W: Deliver in order per vehicle (ack deadline 20 s)
+    alt Processed
+        W-->>S: ack
+    else Failure, retried with 5-60 s backoff
+        S->>W: Redeliver (up to 5 attempts)
+        S->>DLQ: Forward after 5 failed attempts
+        DLQ->>M: num_undelivered_messages > 0 for 5 min
+        M-->>M: Alert fires with runbook (inspect, fix, replay)
+    end
+```
+
+Components: [Program.cs](app/Program.cs), [iam.tf](infra/iam.tf), [data.tf](infra/data.tf) (topic, subscriptions, DLQ), [monitoring.tf](infra/monitoring.tf).
+
+> No workload consumes `vehicle-positions-processor` yet. In a running lab, unacknowledged messages are retried, land in the DLQ and fire the alert.
+
+### Flow 3: An application developer ships code (CI, then GitOps CD)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor D as Developer
+    participant GH as GitHub<br/>(repo + app.yml)
+    participant WIF as Workload Identity<br/>Federation (OIDC)
+    participant AR as Artifact Registry<br/>(immutable tags)
+    participant ARGO as ArgoCD<br/>(ns argocd)
+    participant K as GKE Autopilot<br/>(ns transit)
+
+    D->>GH: Pull request touching app/**
+    GH->>GH: dotnet build, dotnet format check
+    GH->>GH: SonarQube quality gate (if SONAR_TOKEN is set)
+    GH->>GH: docker build vehicle-api:SHA
+    GH->>GH: Trivy scan, fails on fixable HIGH or CRITICAL
+    Note over GH: On a PR, the workflow stops here (no push)
+    D->>GH: Merge to main
+    GH->>GH: Same build, scan and quality steps
+    GH->>WIF: GitHub OIDC token (this repository only)
+    WIF-->>GH: Impersonate gh-ci-sa (artifactregistry.writer)
+    GH->>AR: docker push vehicle-api:SHA
+    GH->>GH: kustomize edit set image in k8s/overlays/dev
+    GH->>GH: Commit and push "deploy(dev): vehicle-api SHA"
+    loop Every 60 s
+        ARGO->>GH: Poll k8s/overlays/dev
+    end
+    ARGO->>K: Sync (server-side apply, prune, selfHeal)
+    K->>AR: Nodes pull image (node SA has artifactregistry.reader)
+    K->>K: Rolling update (maxSurge 1, maxUnavailable 0, readiness /healthz)
+    Note over D,K: Rollback: git revert the deploy commit and ArgoCD redeploys the previous tag.<br/>Manual drift (for example kubectl scale) is reverted by selfHeal.
+```
+
+Components: [app.yml](.github/workflows/app.yml), [Dockerfile](app/Dockerfile), [bootstrap/main.tf](bootstrap/main.tf) (WIF, `gh-ci-sa`), [registry.tf](infra/registry.tf), [platform/main.tf](platform/main.tf) (ArgoCD Application), [k8s/overlays/dev](k8s/overlays/dev/kustomization.yaml).
+
+### Flow 4: A platform engineer changes infrastructure (Terraform)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor P as Platform engineer
+    participant GH as GitHub<br/>(terraform.yml)
+    participant WIF as Workload Identity<br/>Federation (OIDC)
+    participant GCS as GCS state bucket<br/>(versioned, native lock)
+    actor A as Approver<br/>(dev environment)
+    participant GCP as GCP APIs
+    participant K as GKE cluster
+
+    P->>GH: Pull request touching infra/** or platform/**
+    GH->>WIF: OIDC token
+    WIF-->>GH: Impersonate gh-terraform-sa
+    GH->>GH: fmt, init, validate, Checkov (soft fail)
+    GH->>GCS: Read infra state, then plan
+    GH-->>P: Plan posted as a PR comment
+    P->>GH: Merge to main
+    Note over GH: concurrency terraform-dev runs one pipeline at a time
+    GH->>GCS: infra plan, saved as a workflow artifact
+    GH->>A: Waiting for approval
+    A-->>GH: Approve
+    GH->>GCP: terraform apply tfplan (the exact approved plan)
+    GH->>GCS: Write infra state
+    GH->>GCS: platform plan reads infra outputs (terraform_remote_state)
+    GH->>A: Waiting for approval
+    A-->>GH: Approve
+    GH->>K: Apply namespace, transit-config ConfigMap, ArgoCD, Application
+    GH->>GCS: Write platform state
+    Note over K: Pods pick up new endpoints (Redis, Pub/Sub, DB) from the ConfigMap
+```
+
+`bootstrap/` is outside this flow. A project Owner applies it once from a workstation, then migrates its state into the bucket (see [Managing the state file in GCP](#managing-the-state-file-in-gcp)).
+
+### Flow 5: An operator or on-call engineer
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor O as Operator
+    participant IAM as Google IAM
+    participant CP as GKE control plane<br/>(DNS endpoint)
+    participant ARGO as ArgoCD server<br/>(ClusterIP)
+    participant LOG as Cloud Logging
+    participant M as Cloud Monitoring
+
+    O->>IAM: gcloud auth login
+    O->>CP: get-credentials --dns-endpoint, then kubectl
+    CP->>IAM: Check the caller's IAM permissions
+    Note over CP: IP endpoint has no authorized CIDRs.<br/>DNS endpoint works from anywhere with IAM.
+    O->>CP: kubectl port-forward svc/argocd-server
+    CP->>ARGO: Tunnel to localhost:8080 (admin user)
+    O->>LOG: Cloud Armor DENY logs, LB logs (50% sampled)
+    O->>LOG: VPC flow logs, NAT errors, Cloud SQL slow queries (over 500 ms)
+    M-->>O: DLQ alert (notification channel still to be configured)
+    Note over CP: Autopilot upgrades: Sundays 02:00-06:00 Montreal time (REGULAR channel)
+```
+
 ## Repository layout
 
 | Folder | Role | GCS state (prefix) |
@@ -217,7 +394,16 @@ Rollback: `git revert` the `deploy(dev): ...` commit, and ArgoCD goes back to th
 
 ### 8. Costs and teardown
 
-Rough order of magnitude for a lab running continuously: GKE Autopilot (cluster fee and pods), Load Balancer, Cloud SQL `db-f1-micro`, 1 GB Redis and NAT. Expect a few dollars per day. Set `enable_cloudsql=false` and `enable_redis=false` to lower the bill, and **destroy after use**:
+Rough order of magnitude for a lab running continuously: GKE Autopilot (cluster fee and pods), Load Balancer, Cloud SQL `db-f1-micro`, 1 GB Redis and NAT. Expect a few dollars per day. Set `enable_cloudsql=false` and `enable_redis=false` to lower the bill, and **destroy after use**.
+
+**Option A: through GitHub Actions (recommended)**
+
+```bash
+gh workflow run terraform.yml -f action=destroy -f confirm=destroy
+```
+The run destroys `platform` and then `infra`, and each destroy plan waits for approval in the `dev` environment. Before the platform destroy, it scales ArgoCD's application controller to zero so self-heal cannot recreate the Gateway. It then deletes the Gateway and waits for the load balancer to release the static IP. After the platform destroy, it waits for the GKE NEGs to disappear, then runs the infra destroy.
+
+**Option B: from your workstation**
 
 ```bash
 terraform -chdir=platform destroy -var-file=env/dev.tfvars -var="project_id=$PROJECT_ID" \
