@@ -66,6 +66,8 @@ resource "google_service_networking_connection" "psa" {
   network                 = google_compute_network.vpc.id
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.psa.name]
+
+  deletion_policy = "ABANDON"
 }
 
 # --- Static public IP for the Gateway (global L7 load balancer) --------------
