@@ -4,8 +4,8 @@ region                = "northamerica-northeast1"
 prefix                = "transit-lab"
 rate_limit_per_minute = 300
 allowed_countries     = ["CA", "US"]
-enable_cloudsql       = true
-enable_redis          = true
+enable_cloudsql       = false
+enable_redis          = false
 deletion_protection   = false
 
 # Optional: allow your IP on the control plane IP endpoint.
