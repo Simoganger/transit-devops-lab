@@ -365,28 +365,8 @@ Answer framework for each case, at the whiteboard:
 **Scenario**: a major metro outage multiplies traffic on the real-time schedule API by 20; latency explodes.
 
 ### Target architecture
-```
- Apps (Chrono, third parties, signs)                  Operator feeds (GTFS-RT, AVL)
-        │                                                        │
-   Cloud DNS                                              ┌──────▼───────┐
-        │                                                 │ Ingestion    │ Cloud Run / GKE
- ┌──────▼──────────────────────┐                          │ (normalizes) │
- │ Global HTTPS LB + Cloud CDN │  5-15 s cache on         └──────┬───────┘
- │ + Cloud Armor (rate limit)  │  /vehicles, /trip-updates       │
- └──────┬──────────────────────┘                          ┌──────▼───────┐
- ┌──────▼───────┐                                         │  Pub/Sub     │ ordering_key = vehicle_id
- │ Apigee       │ per-client quotas (SpikeArrest)         └──────┬───────┘
- └──────┬───────┘                                         ┌──────▼───────┐
- ┌──────▼──────────────────────────┐                      │ Dataflow     │ windows, enrichment,
- │ GKE: read-api (stateless)       │                      │ (streaming)  │ delay detection
- │ HPA CPU + RPS, high min at      │◄───── reads ─────────┤              │
- │ peak, PDB, multi-zone           │                      └──┬────────┬──┘
- └──────┬──────────────────────────┘                         │        │
- ┌──────▼──────────┐                              ┌──────────▼──┐ ┌───▼──────┐
- │ Memorystore HA  │◄─── writes current state ────┤ Redis       │ │ BigQuery │ analytics
- │ (current state) │                              └─────────────┘ │ Bigtable │ history
- └─────────────────┘                                              └──────────┘
-```
+![Case 1 architecture: the read path (apps → Cloud DNS → global HTTPS LB with Cloud CDN and Cloud Armor → Apigee → stateless GKE read-api → Memorystore Redis) is separated from the write path (operator GTFS-RT/AVL feeds → ingestion → Pub/Sub → Dataflow, which writes current state to Redis and history to BigQuery and Bigtable)](diagrams/case1-realtime-api.svg)
+
 **Key idea**: separate the **write path** (streaming ingestion) from the **read path** (CQRS). The read API **never** queries the transactional DB directly; it reads a precomputed state from Redis, and the CDN absorbs most of the traffic.
 
 ### Incident response (short term)
@@ -412,31 +392,7 @@ Answer framework for each case, at the whiteboard:
 ## Case 2: Full pipeline for a new .NET microservice
 
 ### Pipeline architecture
-```
- Dev ──PR──► GitHub (app repo)
-               │
-     ┌─────────▼──────────────────────────── GitHub Actions (OIDC → GCP, keyless) ──────────┐
-     │ 1. build + unit tests + coverage                                                     │
-     │ 2. SonarQube quality gate (new code)          ── failure = PR blocked                │
-     │ 3. SCA (Dependabot / dotnet list package --vulnerable)                               │
-     │ 4. docker build (multi-stage, non-root) → Trivy (CRITICAL blocks) → SBOM (Syft)      │
-     │ 5. merge to main: push to Artifact Registry  tag = SHA (immutable)                   │
-     │ 6. cosign sign (keyless) + SLSA attestation                                          │
-     │ 7. commit to the GitOps repo: overlays/dev  image = …@sha256:digest                  │
-     └─────────┬────────────────────────────────────────────────────────────────────────────┘
-               │
-       GitOps repo (k8s/)  ◄── promotion PR dev → qa → prod (approvals, CODEOWNERS)
-               │ pull
-     ┌─────────▼────────┐   Binary Authorization: rejects unsigned images
-     │ ArgoCD (per env.)│──► GKE dev ──► smoke + integration tests (PostSync hook)
-     └──────────────────┘──► GKE qa  ──► DAST (ZAP), load tests
-                         └─► GKE prod ─► Argo Rollouts canary 10% → 50% → 100%
-                                         AnalysisTemplate: 5xx < 1%, p95 < 300 ms
-                                         otherwise automatic rollback
-
- Service infrastructure (database, Pub/Sub topic, IAM): Terraform module in the infra
- repo, separate pipeline (plan on PR → approved apply), outputs → ConfigMap / External Secrets.
-```
+![Case 2 pipeline: PR to GitHub → GitHub Actions with OIDC (build/tests, SonarQube gate, SCA, Docker build + Trivy + SBOM; on merge push to Artifact Registry, cosign sign, commit digest to GitOps repo) → GitOps repo promotion PRs → ArgoCD per environment → GKE dev (smoke tests), qa (DAST, load tests), prod (Argo Rollouts canary with automatic rollback), all behind Binary Authorization; infra via a separate Terraform pipeline](diagrams/case2-dotnet-pipeline.svg)
 
 ### Details
 - **Repository template** (*golden path*): the platform team provides a template (Backstage, or a template repository) containing the reusable workflow, Dockerfile, chart and dashboards. A new service starts in one hour with the standards built in: this is the **reuse of proven solutions** asked for in the job posting.
@@ -451,38 +407,7 @@ Answer framework for each case, at the whiteboard:
 ## Case 3: DDoS or bot attack on online fare sales
 
 ### Defence-in-depth architecture
-```
-                Bots / attackers         Legitimate riders
-                        │                       │
-             ┌──────────▼───────────────────────▼──────────┐
- Layer 1     │ Google Front End (anycast):                 │
-             │ L3/L4 DDoS absorbed                         │
-             └──────────┬──────────────────────────────────┘
-             ┌──────────▼──────────────────────────────────┐
- Layer 2     │ Cloud Armor                                 │
-             │  • adaptive protection (L7 ML)              │
-             │  • reCAPTCHA Enterprise (bot score) on      │
-             │    /checkout and /login                     │
-             │  • rate_based_ban: >100 req/min on /login   │
-             │    = 10 min ban                             │
-             │  • OWASP WAF · geo-filtering · IP           │
-             │    reputation lists (Threat Intelligence)   │
-             └──────────┬──────────────────────────────────┘
-             ┌──────────▼─────────┐   ┌───────────────────────┐
- Layer 3     │ Apigee: per-client │   │ CIAM: adaptive MFA    │
-             │ quotas, SpikeArrest│   │ anti credential-      │
-             └──────────┬─────────┘   │ stuffing, lockout     │
-                        │             └───────────────────────┘
-             ┌──────────▼──────────────────────────────────┐
- Layer 4     │ GKE (private nodes, origin not exposed)     │
-             │ capped HPA · virtual waiting room on        │
-             │ saturation · idempotent orders              │
-             └──────────┬──────────────────────────────────┘
-             ┌──────────▼─────────┐
- Layer 5     │ Payment processor  │  tokenization: no card data
-             │ (PCI DSS)          │  passes through our systems → reduced PCI scope
-             └────────────────────┘
-```
+![Case 3 defence in depth: layer 1 Google Front End absorbs L3/L4 DDoS; layer 2 Cloud Armor (adaptive protection, reCAPTCHA, rate-based ban, OWASP WAF, geo-filtering, IP reputation); layer 3 Apigee quotas and CIAM adaptive MFA; layer 4 private GKE with capped HPA and a waiting room; layer 5 PCI DSS payment processor with tokenization](diagrams/case3-ddos-defence.svg)
 
 ### Incident runbook
 1. **Detection**: alerts on RPS, 4xx/5xx rate, latency and adaptive protection (attack alert with a proposed rule).
@@ -505,22 +430,8 @@ Answer framework for each case, at the whiteboard:
 2. **Negotiate deliverables** (contract clauses for future contracts): container images or a Helm chart, release notes, operations documentation, health endpoints, metrics, logs on stdout, SLA for security patches.
 3. **Choose the target**:
 
-```
- Option A: containerizable                   Option B: not containerizable
- ─────────────────────────────               ──────────────────────────────────
- "vendor-x" GitOps repo                      Packer → hardened, versioned VM image
-  ├─ vendor (or in-house) Helm chart          (CIS, Ops agent, preinstalled software)
-  ├─ values-dev/qa/prod.yaml                         │
-  └─ ExternalSecrets, NetworkPolicies        Terraform: Managed Instance Group
-        │                                     (template, health check, autohealing,
-     ArgoCD → GKE (dedicated namespace,       rolling update)
-     quotas, PSS)                                    │
-                                              Ansible / startup script for
-                                              environment-specific configuration
-                                                     │
-                                              Immutable deployment: new image
-                                              = new template = MIG rollout
-```
+![Case 4 decision: if the package can run in containers, GitOps repo with Helm chart → ArgoCD → dedicated GKE namespace; otherwise Packer hardened image → Terraform Managed Instance Group → Ansible/startup configuration → immutable rollout; platform standards enforced in both cases](diagrams/case4-vendor-package.svg)
+
 4. **Platform standards enforced** in both cases: identity (Workload Identity, or least-privilege VM SA), secrets in Secret Manager, logs and metrics in Cloud Logging and Monitoring, backups, vulnerability scanning, private network.
 5. **Automated acceptance tests**: each vendor release goes through the same pipeline (deploy to dev, smoke tests, regression tests, business approval).
 6. **Documentation** turned into executable **runbooks** and code. The Word document becomes a README and pipelines.
@@ -532,26 +443,7 @@ Answer framework for each case, at the whiteboard:
 ## Case 5: Infrastructure drift and console access in production
 
 ### Governance architecture
-```
-                ┌──────────────── GCP Organization ────────────────┐
-                │ Org Policies: allowed regions (Canada),          │
-                │ no public IPs on VMs, no SA keys,                │
-                │ uniform bucket access, restricted IAM domains    │
-                └───────┬───────────────────────┬──────────────────┘
-          Non-Prod folder                   Prod folder
-          (devs: editor)                    (humans: READ ONLY)
-                                                 │
-     Normal change:                              │  Emergency change:
-     PR → plan → review → apply ── Terraform SA  │  PAM (Privileged Access Manager)
-     (the only one allowed to write to prod)     │  2 h JIT elevation, justification,
-                                                 │  approval, audit log
-                                                 │  → must be carried over into code
-     Drift detection:
-     nightly GitHub Actions cron: terraform plan -detailed-exitcode
-       exit 2 → GitHub issue + alert (Slack/Teams)
-     Cloud Asset Inventory feed → Pub/Sub → alert on changes not made by the Terraform SA
-     Audit Logs (Admin Activity) → BigQuery (retention, investigations)
-```
+![Case 5 governance: Org Policies at the organization; non-prod folder (developers are editors) and prod folder (humans read-only); normal changes go PR → plan → review → apply via the Terraform SA, emergency changes through PAM just-in-time elevation and are then codified; drift detection via nightly terraform plan, Cloud Asset Inventory feed and audit logs in BigQuery](diagrams/case5-governance.svg)
 
 ### What to do when drift is discovered
 1. **Understand** without blaming: who, when, why (audit logs)? Was it an incident fix?
@@ -564,18 +456,8 @@ Answer framework for each case, at the whiteboard:
 ## Case 6: Zero-downtime migration from AWS/Azure to GCP
 
 ### Transition architecture
-```
-     Phase 0: foundations       Phase 1: connectivity and data          Phase 2: progressive cutover
- ┌───────────────────────┐    ┌───────────────────────────────────┐   ┌─────────────────────────────┐
- │ GCP landing zone      │    │ AWS ◄═ HA VPN/Interconnect ═► GCP │   │ Weighted DNS (60 s TTL)     │
- │ (Org, folders, Shared │    │ (cross-cloud)                     │   │  90% AWS / 10% GCP          │
- │ VPC, IAM, logs,       │    │ DB replication: CDC (Database     │   │  → 50/50 → 0/100            │
- │ Org Policies) in IaC  │    │ Migration Service / Datastream)   │   │ Side-by-side monitoring     │
- └───────────────────────┘    │ Storage: Storage Transfer Service │   │ (latency, errors, business) │
-                              │ Images: registry replication      │   │ Rollback = DNS              │
-                              └───────────────────────────────────┘   └─────────────────────────────┘
-     Phase 3: decommissioning: freeze, observation period, archiving, deletion, runbook updates
-```
+![Case 6 migration phases: phase 0 GCP landing zone in IaC; phase 1 cross-cloud VPN/Interconnect, CDC database replication, Storage Transfer and registry replication; phase 2 weighted DNS cutover 90/10 → 50/50 → 0/100 with side-by-side monitoring and DNS rollback; phase 3 decommissioning](diagrams/case6-cloud-migration.svg)
+
 ### Key points
 - **Inventory and dependencies** (Migration Center), grouped into waves: start with stateless, low-criticality services to **learn** on a low-risk case.
 - **Per-application strategy (the 6 Rs)**: rehost (VM → Compute Engine), replatform (K8s: EKS/AKS → GKE, almost transparent if the IaC and charts are generic), refactor, repurchase (SaaS), retain, retire.
@@ -590,38 +472,8 @@ Answer framework for each case, at the whiteboard:
 ## Case 7: Setting up a CIAM for riders
 
 ### Architecture
-```
- Chrono app (iOS/Android)     Website (SPA)      Partners (API)
-        │ OIDC Code+PKCE          │ OIDC Code+PKCE     │ OAuth2 client credentials
-        └────────────┬────────────┘                    │
-            ┌────────▼─────────────────────────┐       │
-            │ CIAM (Identity Platform / Auth0) │       │
-            │ • email + password,              │       │
-            │   passkeys, Google/Apple         │       │
-            │ • adaptive MFA (risk)            │       │
-            │ • reCAPTCHA, anti-enumeration    │       │
-            │ • consents (Law 25)              │       │
-            │ • hooks: blocking functions      │       │
-            │   (validation, enrichment)       │       │
-            └───────┬───────────────┬──────────┘       │
-                    │ JWT (15 min)  │ events           │
-            ┌───────▼───────────────┼──────────────────▼─────┐
-            │ Apigee / gateway: JWT validation (JWKS,        │
-            │ iss, aud, exp, scopes), per-client quotas      │
-            └───────┬───────────────┼────────────────────────┘
-            ┌───────▼────────┐  ┌───▼──────────────────────────┐
-            │ Microservices  │  │ "Customer profile" service   │
-            │ (fine-grained  │  │ (business source of truth:   │
-            │  authorization │  │  fares, preferences; linked  │
-            │  by claims)    │  │  by sub, not by email)       │
-            └────────────────┘  └──────┬───────────────────────┘
-                                       │ Pub/Sub: account.created, account.deleted
-                                       ▼ (CRM, sales, pseudonymized analytics)
+![Case 7 CIAM: Chrono app and website use OIDC code + PKCE against the CIAM, partners use OAuth2 client credentials; the API gateway validates JWTs and applies quotas in front of microservices and the customer profile service, which publishes account events to Pub/Sub; employees use a separate workforce IdP](diagrams/case7-ciam.svg)
 
- Internal users: workforce IdP (Entra ID / Google Workspace) → OIDC/SAML SSO to
- ArgoCD, Grafana, SaaS consoles; SCIM for lifecycle; groups → RBAC.
- Never in the same directory as riders.
-```
 ### Decisions to justify
 - **Buy or build**: a managed CIAM, rather than self-hosted Keycloak. Authentication security is not a field where you innovate yourself; compliance and availability are included. Keycloak remains relevant if sovereignty or costs at scale require it.
 - **Stable identifier**: `sub`, not the email (which changes).
@@ -635,12 +487,8 @@ Answer framework for each case, at the whiteboard:
 ## Case 8: 3 a.m. incident, fare validators are no longer reporting transactions
 
 ### Affected architecture (simplified)
-```
- Validators (bus, metro) ──4G/LTE, mTLS──► Ingestion gateway ──► Pub/Sub / Kafka ──► Clearing
-   local buffer (store & forward)          (GKE, certificates)                     service ──► Sales DB
-                                                                                        │
-                                                                                     Financial reconciliation
-```
+![Case 8 flow: validators with store-and-forward buffers → 4G/LTE mTLS → GKE ingestion gateway → Pub/Sub/Kafka → clearing service → sales DB and financial reconciliation, with the usual 3 a.m. failure points marked](diagrams/case8-validators.svg)
+
 ### Approach (structure: roles, mitigation, cause, follow-up)
 1. **Acknowledge and assess impact** (2 min): all validators or a single operator? Are validators **still accepting taps**? If so, thanks to *store & forward*, there is no revenue loss and no immediate rider impact, but the local buffer has a time limit. Set the **severity** accordingly.
 2. **Roles**: incident commander, communications, technical lead. Dedicated channel.

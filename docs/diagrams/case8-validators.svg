@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 330" width="960" height="330" font-family="-apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4a5568"/></marker></defs>
+<rect width="960" height="330" fill="#ffffff"/>
+<rect x="20" y="30" width="170" height="66" rx="7" fill="#f1f3f6" stroke="#5a6577" stroke-width="1.4"/>
+<text x="105.0" y="52.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Validators</text>
+<text x="105.0" y="68.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">bus, metro</text>
+<text x="105.0" y="83.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">local buffer: store &amp; forward</text>
+<path d="M190,63.0 L270,63.0" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="222" y="53.0" font-size="11" font-weight="400" fill="#5a6577" text-anchor="middle" font-style="italic">4G/LTE</text>
+<text x="222" y="81.0" font-size="11" font-weight="400" fill="#5a6577" text-anchor="middle" font-style="italic">mTLS</text>
+<rect x="270" y="30" width="160" height="66" rx="7" fill="#eaf5ee" stroke="#2f855a" stroke-width="1.4"/>
+<text x="350.0" y="60.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Ingestion gateway</text>
+<text x="350.0" y="75.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">GKE, certificates</text>
+<path d="M430,63.0 L470,63.0" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="470" y="30" width="140" height="66" rx="7" fill="#fdf3e3" stroke="#b7791f" stroke-width="1.4"/>
+<text x="540.0" y="67.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Pub/Sub / Kafka</text>
+<path d="M610,63.0 L650,63.0" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="650" y="30" width="140" height="66" rx="7" fill="#eaf5ee" stroke="#2f855a" stroke-width="1.4"/>
+<text x="720.0" y="67.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Clearing service</text>
+<path d="M790,63.0 L830,63.0" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="830" y="30" width="110" height="66" rx="7" fill="#fdf3e3" stroke="#b7791f" stroke-width="1.4"/>
+<text x="885.0" y="67.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Sales DB</text>
+<path d="M720,96 L720,140" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="620" y="140" width="200" height="46" rx="7" fill="#fdf3e3" stroke="#b7791f" stroke-width="1.4"/>
+<text x="720.0" y="167.25" font-size="12.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Financial reconciliation</text>
+<text x="20" y="226" font-size="11" font-weight="700" fill="#c53030" text-anchor="start">USUAL SUSPECTS AT 3 A.M.</text>
+<rect x="20" y="240" width="172" height="62" rx="7" fill="#fbeaea" stroke="#c53030" stroke-width="1.4"/>
+<text x="106.0" y="260.0" font-size="12" font-weight="600" fill="#0b3d63" text-anchor="middle">Recent change</text>
+<text x="106.0" y="274.0" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">ArgoCD sync, Terraform,</text>
+<text x="106.0" y="289.0" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">firewall / Cloud Armor rule</text>
+<rect x="206" y="240" width="172" height="62" rx="7" fill="#fbeaea" stroke="#c53030" stroke-width="1.4"/>
+<text x="292.0" y="267.5" font-size="12" font-weight="600" fill="#0b3d63" text-anchor="middle">Expired mTLS certificate</text>
+<text x="292.0" y="281.5" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">server cert or client CA</text>
+<path d="M292,240 L292,214 L252,214 L252,71" fill="none" stroke="#c53030" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="392" y="240" width="172" height="62" rx="7" fill="#fbeaea" stroke="#c53030" stroke-width="1.4"/>
+<text x="478.0" y="260.0" font-size="12" font-weight="600" fill="#0b3d63" text-anchor="middle">Quota / limit reached</text>
+<text x="478.0" y="274.0" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">NAT: OUT_OF_RESOURCES,</text>
+<text x="478.0" y="289.0" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">connections, throughput</text>
+<path d="M478,240 L478,214 L350,214 L350,100" fill="none" stroke="#c53030" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="578" y="240" width="172" height="62" rx="7" fill="#fbeaea" stroke="#c53030" stroke-width="1.4"/>
+<text x="664.0" y="267.5" font-size="12" font-weight="600" fill="#0b3d63" text-anchor="middle">Stuck consumer</text>
+<text x="664.0" y="281.5" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">backlog grows, DLQ fills up</text>
+<path d="M664,240 L664,214 L540,214 L540,100" fill="none" stroke="#c53030" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="764" y="240" width="172" height="62" rx="7" fill="#fbeaea" stroke="#c53030" stroke-width="1.4"/>
+<text x="850.0" y="267.5" font-size="12" font-weight="600" fill="#0b3d63" text-anchor="middle">Saturated DB</text>
+<text x="850.0" y="281.5" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">connection pool exhausted</text>
+<path d="M850,240 L850,214 L885,214 L885,100" fill="none" stroke="#c53030" stroke-width="1.5" stroke-dasharray="5 4"/>
+</svg>

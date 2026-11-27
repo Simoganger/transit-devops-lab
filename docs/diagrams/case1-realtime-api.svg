@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" font-family="-apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4a5568"/></marker></defs>
+<rect width="960" height="560" fill="#ffffff"/>
+<text x="190" y="26" font-size="12" font-weight="700" fill="#0b6fa4" text-anchor="middle">READ PATH (query side)</text>
+<text x="750" y="26" font-size="12" font-weight="700" fill="#b7791f" text-anchor="middle">WRITE PATH (streaming ingestion)</text>
+<path d="M560,12 L560,548" fill="none" stroke="#c3ccd8" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="40" y="44" width="300" height="44" rx="7" fill="#f1f3f6" stroke="#5a6577" stroke-width="1.4"/>
+<text x="190.0" y="70.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Apps: Chrono, third parties, signs</text>
+<path d="M190.0,88 L190.0,118" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="40" y="118" width="300" height="36" rx="7" fill="#e8f1f8" stroke="#0b6fa4" stroke-width="1.4"/>
+<text x="190.0" y="140.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Cloud DNS</text>
+<path d="M190.0,154 L190.0,182" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="40" y="182" width="300" height="58" rx="7" fill="#e8f1f8" stroke="#0b6fa4" stroke-width="1.4"/>
+<text x="190.0" y="208.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Global HTTPS LB + Cloud CDN</text>
+<text x="190.0" y="223.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">Cloud Armor: rate limiting</text>
+<text x="352" y="202" font-size="11" font-weight="400" fill="#4a5568" text-anchor="start" font-style="italic">CDN caches /vehicles and</text>
+<text x="352" y="217" font-size="11" font-weight="400" fill="#4a5568" text-anchor="start" font-style="italic">/trip-updates for 5-15 s</text>
+<path d="M190.0,240 L190.0,268" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="40" y="268" width="300" height="50" rx="7" fill="#e8f1f8" stroke="#0b6fa4" stroke-width="1.4"/>
+<text x="190.0" y="290.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Apigee</text>
+<text x="190.0" y="305.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">per-client quotas (SpikeArrest)</text>
+<path d="M190.0,318 L190.0,346" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="40" y="346" width="300" height="76" rx="7" fill="#eaf5ee" stroke="#2f855a" stroke-width="1.4"/>
+<text x="190.0" y="373.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">GKE · read-api (stateless)</text>
+<text x="190.0" y="389.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">HPA on CPU + RPS, high min at peak</text>
+<text x="190.0" y="404.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">PDB, multi-zone</text>
+<path d="M190.0,422 L190.0,460" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="198.0" y="446" font-size="11" font-weight="400" fill="#5a6577" text-anchor="start" font-style="italic">reads</text>
+<rect x="40" y="460" width="300" height="58" rx="7" fill="#fdf3e3" stroke="#b7791f" stroke-width="1.4"/>
+<text x="190.0" y="486.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Memorystore Redis HA</text>
+<text x="190.0" y="501.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">precomputed current state</text>
+<rect x="600" y="44" width="300" height="44" rx="7" fill="#f1f3f6" stroke="#5a6577" stroke-width="1.4"/>
+<text x="750.0" y="70.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Operator feeds (GTFS-RT, AVL)</text>
+<path d="M750.0,88 L750.0,126" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="600" y="126" width="300" height="54" rx="7" fill="#eaf5ee" stroke="#2f855a" stroke-width="1.4"/>
+<text x="750.0" y="150.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Ingestion (normalizes)</text>
+<text x="750.0" y="165.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">Cloud Run / GKE</text>
+<path d="M750.0,180 L750.0,216" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="600" y="216" width="300" height="54" rx="7" fill="#fdf3e3" stroke="#b7791f" stroke-width="1.4"/>
+<text x="750.0" y="240.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Pub/Sub</text>
+<text x="750.0" y="255.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">ordering_key = vehicle_id</text>
+<path d="M750.0,270 L750.0,306" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="600" y="306" width="300" height="70" rx="7" fill="#eaf5ee" stroke="#2f855a" stroke-width="1.4"/>
+<text x="750.0" y="330.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Dataflow (streaming)</text>
+<text x="750.0" y="346.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">windows, enrichment,</text>
+<text x="750.0" y="361.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">delay detection</text>
+<path d="M600,352 L470,352 L470,489 L342,489" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="478" y="420" font-size="11" font-weight="400" fill="#5a6577" text-anchor="start" font-style="italic">writes current state</text>
+<path d="M680,376 L680,460" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M820,376 L820,460" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="600" y="460" width="140" height="58" rx="7" fill="#fdf3e3" stroke="#b7791f" stroke-width="1.4"/>
+<text x="670.0" y="486.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">BigQuery</text>
+<text x="670.0" y="501.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">analytics</text>
+<rect x="760" y="460" width="140" height="58" rx="7" fill="#fdf3e3" stroke="#b7791f" stroke-width="1.4"/>
+<text x="830.0" y="486.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Bigtable</text>
+<text x="830.0" y="501.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">history</text>
+</svg>

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 610" width="960" height="610" font-family="-apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4a5568"/></marker></defs>
+<rect width="960" height="610" fill="#ffffff"/>
+<rect x="170" y="16" width="220" height="40" rx="7" fill="#fbeaea" stroke="#c53030" stroke-width="1.4"/>
+<text x="280.0" y="40.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Bots / attackers</text>
+<rect x="470" y="16" width="220" height="40" rx="7" fill="#eaf5ee" stroke="#2f855a" stroke-width="1.4"/>
+<text x="580.0" y="40.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Legitimate riders</text>
+<path d="M280,56 L280,92" fill="none" stroke="#c53030" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M580,56 L580,92" fill="none" stroke="#2f855a" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="40" y="121.0" font-size="11" font-weight="700" fill="#0b6fa4" text-anchor="start">LAYER 1</text>
+<text x="40" y="242.0" font-size="11" font-weight="700" fill="#0b6fa4" text-anchor="start">LAYER 2</text>
+<text x="40" y="369.0" font-size="11" font-weight="700" fill="#0b6fa4" text-anchor="start">LAYER 3</text>
+<text x="40" y="461.0" font-size="11" font-weight="700" fill="#0b6fa4" text-anchor="start">LAYER 4</text>
+<text x="40" y="553.0" font-size="11" font-weight="700" fill="#0b6fa4" text-anchor="start">LAYER 5</text>
+<text x="740" y="82" font-size="11" font-weight="700" fill="#4a5568" text-anchor="start">WHAT IT STOPS</text>
+<rect x="150" y="92" width="560" height="50" rx="7" fill="#e8f1f8" stroke="#0b6fa4" stroke-width="1.4"/>
+<text x="430.0" y="114.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Google Front End (anycast)</text>
+<text x="430.0" y="129.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">L3/L4 DDoS absorbed at Google&#x27;s edge</text>
+<path d="M430,142 L430,172" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="150" y="172" width="560" height="132" rx="7" fill="#fbeaea" stroke="#c53030" stroke-width="1.4"/>
+<text x="430.0" y="212.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Cloud Armor</text>
+<text x="430.0" y="228.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">adaptive protection (L7 machine learning)</text>
+<text x="430.0" y="243.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">reCAPTCHA Enterprise bot score on /checkout and /login</text>
+<text x="430.0" y="258.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">rate_based_ban: &gt; 100 req/min on /login → 10 min ban</text>
+<text x="430.0" y="273.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">OWASP WAF rules · geo-filtering · IP reputation (Threat Intelligence)</text>
+<path d="M285,304 L285,334" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M575,304 L575,334" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="150" y="334" width="270" height="62" rx="7" fill="#e8f1f8" stroke="#0b6fa4" stroke-width="1.4"/>
+<text x="285.0" y="362.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Apigee</text>
+<text x="285.0" y="377.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">per-client quotas, SpikeArrest</text>
+<rect x="440" y="334" width="270" height="62" rx="7" fill="#e8f1f8" stroke="#0b6fa4" stroke-width="1.4"/>
+<text x="575.0" y="354.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">CIAM</text>
+<text x="575.0" y="370.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">adaptive MFA, anti credential-</text>
+<text x="575.0" y="385.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">stuffing, account lockout</text>
+<path d="M285,396 L285,426" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="150" y="426" width="560" height="62" rx="7" fill="#eaf5ee" stroke="#2f855a" stroke-width="1.4"/>
+<text x="430.0" y="454.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">GKE (private nodes, origin not exposed)</text>
+<text x="430.0" y="469.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">capped HPA · virtual waiting room on saturation · idempotent orders</text>
+<path d="M430,488 L430,518" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="150" y="518" width="560" height="62" rx="7" fill="#fdf3e3" stroke="#b7791f" stroke-width="1.4"/>
+<text x="430.0" y="546.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Payment processor (PCI DSS)</text>
+<text x="430.0" y="561.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">tokenization: no card data passes through our systems → reduced PCI scope</text>
+<text x="740" y="121" font-size="11.5" font-weight="400" fill="#1d2330" text-anchor="start">Volumetric L3/L4 floods</text>
+<text x="740" y="230" font-size="11.5" font-weight="400" fill="#1d2330" text-anchor="start">Bots, L7 attacks, brute force,</text>
+<text x="740" y="369" font-size="11.5" font-weight="400" fill="#1d2330" text-anchor="start">Abusive clients, account takeover</text>
+<text x="740" y="461" font-size="11.5" font-weight="400" fill="#1d2330" text-anchor="start">Saturation of the origin</text>
+<text x="740" y="553" font-size="11.5" font-weight="400" fill="#1d2330" text-anchor="start">Card data exposure</text>
+<text x="740" y="245" font-size="11.5" font-weight="400" fill="#1d2330" text-anchor="start">credential stuffing</text>
+</svg>

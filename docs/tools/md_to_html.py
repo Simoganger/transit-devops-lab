@@ -1,6 +1,6 @@
 """Render the interview guide Markdown to print-ready HTML (cover page, styles).
 Usage: md_to_html.py <input.md> <output.html>  (called by build-pdf.sh)"""
-import re, sys, markdown
+import os, re, sys, markdown
 src, out = sys.argv[1], sys.argv[2]
 md = open(src, encoding="utf-8").read()
 # Drop title + intro (they go on the cover), i.e. everything up to the first '---'
@@ -20,6 +20,14 @@ def fix_lists(md):
     return "\n".join(out)
 md = fix_lists(md)
 body = markdown.markdown(md, extensions=["tables", "fenced_code", "sane_lists"])
+# Inline the SVG diagrams (docs/diagrams/*.svg) so the HTML is self-contained
+docs_dir = os.path.dirname(os.path.abspath(src))
+def inline_svg(m):
+    alt, path = m.group(1), m.group(2)
+    svg = open(os.path.join(docs_dir, path), encoding="utf-8").read()
+    svg = re.sub(r'\s(width|height)="\d+"', "", svg, count=2)  # scale to the column width
+    return f'<figure class="diagram" role="img" aria-label="{alt}">{svg}</figure>'
+body = re.sub(r'<p><img alt="([^"]*)" src="(diagrams/[^"]+\.svg)" ?/?></p>', inline_svg, body)
 # Page break before each top-level part, except the first
 body = re.sub(r"<h1>", '<h1 class="part">', body)
 cover = """
@@ -56,6 +64,8 @@ th { background: #0b3d63; color: #fff; }
 tr { break-inside: avoid; }
 tr:nth-child(even) td { background: #f6f9fb; }
 hr { display: none; }
+figure.diagram { margin: 8px 0 10px; break-inside: avoid; }
+figure.diagram svg { display: block; width: 100%; height: auto; border: 1px solid #d5dde6; border-radius: 4px; }
 em { color: #3a4556; }
 .cover { height: 9.3in; display: flex; flex-direction: column; justify-content: center; }
 .kicker { letter-spacing: 2px; font-size: 9pt; color: #0b6fa4; font-weight: 600; }

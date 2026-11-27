@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" width="960" height="720" font-family="-apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4a5568"/></marker></defs>
+<rect width="960" height="720" fill="#ffffff"/>
+<rect x="40" y="16" width="180" height="44" rx="7" fill="#f1f3f6" stroke="#5a6577" stroke-width="1.4"/>
+<text x="130.0" y="42.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Partners (API)</text>
+<rect x="260" y="16" width="180" height="44" rx="7" fill="#f1f3f6" stroke="#5a6577" stroke-width="1.4"/>
+<text x="350.0" y="42.25" font-size="12.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Chrono app (iOS/Android)</text>
+<rect x="470" y="16" width="180" height="44" rx="7" fill="#f1f3f6" stroke="#5a6577" stroke-width="1.4"/>
+<text x="560.0" y="42.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Website (SPA)</text>
+<path d="M350,60 L350,110" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M560,60 L560,110" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="455" y="82" font-size="11" font-weight="400" fill="#5a6577" text-anchor="middle" font-style="italic">OIDC code</text>
+<text x="455" y="96" font-size="11" font-weight="400" fill="#5a6577" text-anchor="middle" font-style="italic">+ PKCE</text>
+<path d="M130,60 L130,300" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="138" y="170" font-size="11" font-weight="400" fill="#5a6577" text-anchor="start" font-style="italic">OAuth2 client</text>
+<text x="138" y="184" font-size="11" font-weight="400" fill="#5a6577" text-anchor="start" font-style="italic">credentials</text>
+<rect x="260" y="110" width="390" height="146" rx="7" fill="#fbeaea" stroke="#c53030" stroke-width="1.4"/>
+<text x="455.0" y="150.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">CIAM (Identity Platform / Auth0)</text>
+<text x="455.0" y="165.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">email + password, passkeys, Google / Apple</text>
+<text x="455.0" y="180.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">adaptive MFA (risk-based)</text>
+<text x="455.0" y="195.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">reCAPTCHA, anti-enumeration</text>
+<text x="455.0" y="210.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">consent records (Law 25)</text>
+<text x="455.0" y="225.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">blocking functions: validation, enrichment</text>
+<path d="M455,256 L455,300" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="463" y="283" font-size="11" font-weight="400" fill="#5a6577" text-anchor="start" font-style="italic">JWT (15 min)</text>
+<rect x="40" y="300" width="610" height="56" rx="7" fill="#e8f1f8" stroke="#0b6fa4" stroke-width="1.4"/>
+<text x="345.0" y="325.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Apigee / API gateway</text>
+<text x="345.0" y="340.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">JWT validation (JWKS, iss, aud, exp, scopes) · per-client quotas</text>
+<path d="M180,356 L180,400" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M500,356 L500,400" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="40" y="400" width="280" height="74" rx="7" fill="#eaf5ee" stroke="#2f855a" stroke-width="1.4"/>
+<text x="180.0" y="426.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Microservices</text>
+<text x="180.0" y="442.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">fine-grained authorization</text>
+<text x="180.0" y="457.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">based on token claims</text>
+<rect x="360" y="400" width="280" height="74" rx="7" fill="#eaf5ee" stroke="#2f855a" stroke-width="1.4"/>
+<text x="500.0" y="426.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Customer profile service</text>
+<text x="500.0" y="442.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">business source of truth: fares,</text>
+<text x="500.0" y="457.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">preferences · keyed by sub, not email</text>
+<path d="M650,183 L780,183 L780,437 L642,437" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="788" y="310" font-size="11" font-weight="400" fill="#5a6577" text-anchor="start" font-style="italic">account events</text>
+<path d="M500,474 L500,512" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="360" y="512" width="280" height="54" rx="7" fill="#fdf3e3" stroke="#b7791f" stroke-width="1.4"/>
+<text x="500.0" y="536.25" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Pub/Sub</text>
+<text x="500.0" y="551.75" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">account.created, account.deleted</text>
+<path d="M640,539 L690,539" fill="none" stroke="#4a5568" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="690" y="512" width="230" height="54" rx="7" fill="#f1f3f6" stroke="#5a6577" stroke-width="1.4"/>
+<text x="805.0" y="536.0" font-size="13" font-weight="600" fill="#0b3d63" text-anchor="middle">Consumers</text>
+<text x="805.0" y="551.0" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">CRM, sales, pseudonymized analytics</text>
+<path d="M40,598 L920,598" fill="none" stroke="#c3ccd8" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="40" y="590" font-size="11" font-weight="700" fill="#4a5568" text-anchor="start">RIDERS (customer identity) ▲</text>
+<text x="40" y="616" font-size="11" font-weight="700" fill="#4a5568" text-anchor="start">▼ EMPLOYEES (workforce identity, a separate directory)</text>
+<rect x="40" y="626" width="880" height="76" rx="7" fill="#e8f1f8" stroke="#0b6fa4" stroke-width="1.4"/>
+<text x="480.0" y="653.75" font-size="13.5" font-weight="600" fill="#0b3d63" text-anchor="middle">Workforce IdP (Entra ID / Google Workspace)</text>
+<text x="480.0" y="669.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">OIDC / SAML SSO to ArgoCD, Grafana, SaaS consoles · SCIM for the account lifecycle · groups → RBAC</text>
+<text x="480.0" y="684.25" font-size="11.5" font-weight="400" fill="#4a5568" text-anchor="middle">Never in the same directory as riders</text>
+</svg>

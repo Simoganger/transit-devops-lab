@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds docs/Interview-guide-DevOps-ARTM.pdf from docs/INTERVIEW-GUIDE-ARTM.md.
-#   Markdown -> HTML (md_to_html.py) -> PDF (headless Chrome) -> footer + page numbers (add_footer.py)
+#   diagrams.py (SVGs) -> Markdown -> HTML (md_to_html.py) -> PDF (headless Chrome) -> footer + page numbers (add_footer.py)
 # Requirements: python3 and Google Chrome (or set CHROME=/path/to/chrome).
 set -euo pipefail
 
@@ -24,6 +24,7 @@ if [[ ! -x "$VENV/bin/python" ]]; then
   "$VENV/bin/pip" install -q --disable-pip-version-check -r "$TOOLS_DIR/requirements.txt"
 fi
 
+"$VENV/bin/python" "$TOOLS_DIR/diagrams.py"
 "$VENV/bin/python" "$TOOLS_DIR/md_to_html.py" "$SRC" "$WORK/guide.html"
 "$CHROME" --headless --disable-gpu --no-pdf-header-footer \
   --print-to-pdf="$WORK/raw.pdf" "file://$WORK/guide.html" 2>/dev/null
